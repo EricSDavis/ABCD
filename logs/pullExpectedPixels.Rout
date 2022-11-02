@@ -1,0 +1,109 @@
+
+R version 4.2.1 (2022-06-23) -- "Funny-Looking Kid"
+Copyright (C) 2022 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+* Project '/pine/scr/e/s/esdavis/ABCD' loaded. [renv 0.15.5]
+[Previously saved workspace restored]
+
+> ## Load required packages
+> library(mariner)
+> library(GenomeInfoDb)
+Loading required package: BiocGenerics
+
+Attaching package: ‘BiocGenerics’
+
+The following object is masked from ‘package:mariner’:
+
+    counts
+
+The following objects are masked from ‘package:stats’:
+
+    IQR, mad, sd, var, xtabs
+
+The following objects are masked from ‘package:base’:
+
+    anyDuplicated, append, as.data.frame, basename, cbind, colnames,
+    dirname, do.call, duplicated, eval, evalq, Filter, Find, get, grep,
+    grepl, intersect, is.unsorted, lapply, Map, mapply, match, mget,
+    order, paste, pmax, pmax.int, pmin, pmin.int, Position, rank,
+    rbind, Reduce, rownames, sapply, setdiff, sort, table, tapply,
+    union, unique, unsplit, which.max, which.min
+
+Loading required package: S4Vectors
+Loading required package: stats4
+
+Attaching package: ‘S4Vectors’
+
+The following objects are masked from ‘package:base’:
+
+    expand.grid, I, unname
+
+Loading required package: IRanges
+> 
+> ## Load raw data
+> load("data/raw/LIMA_binnedEPCounts.rda")
+> 
+> ## LIMA .hic files are big so define
+> ## the path to them here (backup hard-drive)
+> ## Timepoint files
+> timepoints <- c("/proj/phanstiel_lab/Data/processed/LIMA/hic/LIMA_THP1_WT_LPIF_0000_S_0.0.0_megaMap/aligned/LIMA_THP1_WT_LPIF_0000_S_0.0.0_megaMap_inter.hic",
++                 "/proj/phanstiel_lab/Data/processed/LIMA/hic/LIMA_THP1_WT_LPIF_0030_S_0.0.0_megaMap/aligned/LIMA_THP1_WT_LPIF_0030_S_0.0.0_megaMap_inter.hic",
++ 		            "/proj/phanstiel_lab/Data/processed/LIMA/hic/LIMA_THP1_WT_LPIF_0060_S_0.0.0_megaMap/aligned/LIMA_THP1_WT_LPIF_0060_S_0.0.0_megaMap_inter.hic",
++ 		            "/proj/phanstiel_lab/Data/processed/LIMA/hic/LIMA_THP1_WT_LPIF_0090_S_0.0.0_megaMap/aligned/LIMA_THP1_WT_LPIF_0090_S_0.0.0_megaMap_inter.hic",
++ 		            "/proj/phanstiel_lab/Data/processed/LIMA/hic/LIMA_THP1_WT_LPIF_0120_S_0.0.0_megaMap/aligned/LIMA_THP1_WT_LPIF_0120_S_0.0.0_megaMap_inter.hic",
++ 		            "/proj/phanstiel_lab/Data/processed/LIMA/hic/LIMA_THP1_WT_LPIF_0240_S_0.0.0_megaMap/aligned/LIMA_THP1_WT_LPIF_0240_S_0.0.0_megaMap_inter.hic",
++ 		            "/proj/phanstiel_lab/Data/processed/LIMA/hic/LIMA_THP1_WT_LPIF_0360_S_0.0.0_megaMap/aligned/LIMA_THP1_WT_LPIF_0360_S_0.0.0_megaMap_inter.hic",
++ 		            "/proj/phanstiel_lab/Data/processed/LIMA/hic/LIMA_THP1_WT_LPIF_1440_S_0.0.0_megaMap/aligned/LIMA_THP1_WT_LPIF_1440_S_0.0.0_megaMap_inter.hic")
+> ## Omega file
+> omega <- "/proj/phanstiel_lab/Data/processed/LIMA/hic/LIMA_THP1_WT_LPIF_CMB_S_0.0.0_megaMap/aligned/LIMA_THP1_WT_LPIF_CMB_S_0.0.0_omegaMap_inter_withNorms.hic"
+> hicFiles <- c(timepoints, omega)
+> 
+> ## Reformat loops to remove 'chr' prefix
+> seqlevelsStyle(epCounts) <- 'ENSEMBL'
+> 
+> ## Remove chromosomes from epCounts
+> ## that are not in the hicFiles...
+> chromsInLoops <- seqnames(seqinfo(epCounts))
+> chromsInHic <- strawr::readHicChroms(hicFiles[9])$name
+> keep <- chromsInLoops %in% chromsInHic
+> chromsToKeep <- chromsInLoops[keep]
+> seqlevels(epCounts) <- seqlevels(seqinfo(epCounts)[chromsToKeep])
+> 
+> ## Define hdf5 and rds filenames
+> fn <- "data/h5/expectedCounts.h5"
+> rn <- gsub(".h5$", ".rds", fn)
+> 
+> system.time({
++   res <-
++     pullHicPixels(x=epCounts,
++                   binSize=10e03,
++                   files=hicFiles,
++                   h5File=fn,
++                   norm='KR',
++                   matrix='expected',
++                   blockSize=6e06)
++ })
+     user    system   elapsed 
+34043.139  1211.251 35740.418 
+> 
+> ## Save this object
+> saveRDS(object=res, file=rn)
+> 
+> proc.time()
+     user    system   elapsed 
+34182.352  1218.513 35889.409 
